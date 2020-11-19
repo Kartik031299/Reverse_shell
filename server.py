@@ -374,7 +374,7 @@ def send_target_commands(conn):
 				getfile(conn,cmd)
 				continue
 
-			if client_response == "recieving_file":
+			if client_response == "receiving_file":
 				sendfile(conn,cmd)
 				continue
 

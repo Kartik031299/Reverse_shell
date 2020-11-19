@@ -142,7 +142,7 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 
 		if data[:].decode("utf-8").split(" ")[0] == "sendfile":
 			filepath=data[:].decode("utf-8").split(" ")[1]
-			s.send("recieving_file".encode())
+			s.send("receiving_file".encode())
 			filename=os.path.basename(filepath)
 			l=int(s.recv(20480).decode())
 
