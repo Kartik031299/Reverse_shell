@@ -215,7 +215,6 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 	             
 			cmd.terminate()                      # terminating child process after each command
 	except Exception as e:
-		print(e)
 		print("Connection has been closed by server!!!")
 		s.close()
 		break
